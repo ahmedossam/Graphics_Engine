@@ -7,6 +7,7 @@
 #include "Shader.h"
 #include "Quad.h"
 #include<glm.hpp>
+#include"Camera.h"
 int main(int argc, char* argv[])
 {
     // ----- Initialize Scene -----
@@ -26,9 +27,11 @@ int main(int argc, char* argv[])
 
     // ----- Create Quad -----
     Quad* myQuad = new Quad();
+	Camera myCamera;
 
     bool isActive = true;
     Input* input = Input::Instance();
+    myCamera.Set3DProjectionMatrix();
 
     // ----- Main loop -----
     while (isActive)
@@ -40,12 +43,13 @@ int main(int argc, char* argv[])
         // ----- Clear screen -----
         myScene->clearScreen();
 		
+		myCamera.UpdateViewMatrix();
         // Update quad position based on input
         myQuad->Update();
         
          // ----- Render quad (sends uniforms internally) -----
         myQuad->Render();
-
+		
         // ----- Swap buffers -----
         myScene->swapBuffer();
     }
