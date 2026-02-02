@@ -36,14 +36,14 @@ int main(int argc, char* argv[])
         // ----- Update input -----
         input->Update();
         isActive = !input->IsXClicked();
-
-        // ----- Update quad (handles input internally) -----
-        myQuad->Update();
-
+        
         // ----- Clear screen -----
         myScene->clearScreen();
-
-        // ----- Render quad (sends uniforms internally) -----
+		
+        // Update quad position based on input
+        myQuad->Update();
+        
+         // ----- Render quad (sends uniforms internally) -----
         myQuad->Render();
 
         // ----- Swap buffers -----

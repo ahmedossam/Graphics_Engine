@@ -3,18 +3,19 @@
 #include "Input.h"
 #include "Buffer.h"
 #include <iostream>
-#include<gtc/matrix_transform.hpp>
+#include <gtc/matrix_transform.hpp>
 
 Quad::Quad()
 {
-    m_xPos = 0.0f;
-    m_yPos = 0.0f;
+    // Initialize transformation variables properly
+    m_position = glm::vec3(0.0f, 0.0f, 0.0f);
+    m_scale = glm::vec3(1.0f, 1.0f, 1.0f);    // Start with normal scale (1.0)
+    m_rotation = 0.0f;
+    m_modelMatrix = glm::mat4(1.0f);
 
     Shader* myShader = Shader::instance();
-
-    // Make sure shader program is active
     GLuint programID = myShader->getShaderProgramID();
-    std::cout << "Shader Program ID: " << programID << std::endl;
+     
     glUseProgram(programID);
 
     // Vertex data: position (x,y,z) + color (r,g,b)
@@ -29,41 +30,14 @@ Quad::Quad()
        0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f   // Bottom-right (Green)
     };
 
-    // Create buffer with 6 vertices
     m_buffer.Create(6);
     m_buffer.FillVBO(Buffer::VBOType::VERTEX, vertices, sizeof(vertices), GL_STATIC_DRAW);
 
-    // Link attributes to shader
     GLuint vertexID = glGetAttribLocation(programID, "vertexIn");
     GLuint colorID = glGetAttribLocation(programID, "colorIn");
 
-    std::cout << "vertexIn location: " << vertexID << std::endl;
-    std::cout << "colorIn location: " << colorID << std::endl;
-
-    if (vertexID == -1) {
-        std::cout << "ERROR: 'vertexIn' attribute not found in shader!" << std::endl;
-    }
-    if (colorID == -1) {
-        std::cout << "ERROR: 'colorIn' attribute not found in shader!" << std::endl;
-    }
-
-    // Position attribute: 3 floats, stride of 6 floats, offset 0
     m_buffer.LinkAttribute(vertexID, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)0);
-
-    // Color attribute: 3 floats, stride of 6 floats, offset 3 floats
     m_buffer.LinkAttribute(colorID, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
-
-    // Check uniform location
-    GLint offsetLoc = glGetUniformLocation(programID, "offset");
-    std::cout << "offset uniform location: " << offsetLoc << std::endl;
-    if (offsetLoc == -1) {
-        std::cout << "ERROR: 'offset' uniform not found in shader!" << std::endl;
-    }
-	m_modelMatrix = glm::mat4(1.0f);// Initialize to identity matrix
-	m_modelMatrix = glm::translate(m_modelMatrix, glm::vec3(m_xPos, m_yPos, 0.0f));// Set initial position
-	m_modelMatrix = glm::scale(m_modelMatrix, glm::vec3(1.0f, 1.0f, 1.0f));// Set initial scale
-	m_modelMatrix = glm::rotate(m_modelMatrix, 4.0f, glm::vec3(0.0f, 0.0f, 1.0f));// Set initial rotation
-
 }
 
 Quad::~Quad()
@@ -75,40 +49,71 @@ void Quad::Update()
 {
     Input* input = Input::Instance();
 
-    // Handle WASD movement
     if (input->IsKeyPressed())
     {
         char keyDown = input->GetKeyDown();
 
-        if (keyDown == SDLK_W) m_yPos += 0.01f;
-        if (keyDown == SDLK_S) m_yPos -= 0.01f;
-        if (keyDown == SDLK_A) m_xPos -= 0.01f;
-        if (keyDown == SDLK_D) m_xPos += 0.01f;
+        // Movement (WASD)
+        if (keyDown == SDLK_W) m_position.y += 0.01f;  // UP
+        if (keyDown == SDLK_S) m_position.y -= 0.01f;  // DOWN
+        if (keyDown == SDLK_A) m_position.x -= 0.01f;  // LEFT
+        if (keyDown == SDLK_D) m_position.x += 0.01f;  // RIGHT
+
+        // Scaling (Q to grow, E to shrink)
+        if (keyDown == SDLK_Q) {
+            m_scale.x += 0.01f;
+            m_scale.y += 0.01f;
+        }
+        if (keyDown == SDLK_E) {
+            m_scale.x -= 0.01f;
+            m_scale.y -= 0.01f;
+            if (m_scale.x < 0.1f) m_scale.x = 0.1f;
+            if (m_scale.y < 0.1f) m_scale.y = 0.1f;
+        }
+
+        // Rotation (R clockwise, F counter-clockwise)
+        if (keyDown == SDLK_R) m_rotation += 0.05f;   // ~2.86 degrees
+        if (keyDown == SDLK_F) m_rotation -= 0.05f;   // ~2.86 degrees
     }
+
+    // Build model matrix: Translate × Rotate × Scale
+    m_modelMatrix = glm::mat4(1.0f);
+    m_modelMatrix = glm::translate(m_modelMatrix, m_position);
+    m_modelMatrix = glm::rotate(m_modelMatrix, m_rotation, glm::vec3(0.0f, 0.0f, 1.0f));
+    m_modelMatrix = glm::scale(m_modelMatrix, m_scale);
 }
 
 void Quad::Render()
 {
     Shader* myShader = Shader::instance();
-
-    // Make sure shader is active before sending uniforms
     glUseProgram(myShader->getShaderProgramID());
 
-    // Send position to shader as uniform
-    myShader->sendUniformData("model",m_modelMatrix);
+    // Send model matrix to shader
+    GLuint modelLoc = glGetUniformLocation(myShader->getShaderProgramID(), "model");
+    glUniformMatrix4fv(modelLoc, 1, GL_FALSE, &m_modelMatrix[0][0]);
 
-    // Draw the quad
     m_buffer.DrawArrays(GL_TRIANGLES, 6);
 }
 
 void Quad::SetPosition(float x, float y)
 {
-    m_xPos = x;
-    m_yPos = y;
+    m_position.x = x;
+    m_position.y = y;
+}
+
+void Quad::SetScale(float x, float y)
+{
+    m_scale.x = x;
+    m_scale.y = y;
+}
+
+void Quad::SetRotation(float angle)
+{
+    m_rotation = angle;
 }
 
 void Quad::Move(float dx, float dy)
 {
-    m_xPos += dx;
-    m_yPos += dy;
+    m_position.x += dx;
+    m_position.y += dy;
 }
