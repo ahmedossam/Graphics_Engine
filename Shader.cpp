@@ -4,6 +4,7 @@
 #include <iostream>
 #include <sstream>
 #include <set>
+#include <glm.hpp>
 
 // Static set to track uniforms we've already warned about
 static std::set<std::string> warnedUniforms;
@@ -13,6 +14,7 @@ Shader* Shader::instance()
     static Shader* shader = new Shader;
     return shader;
 }
+
 
 Shader::Shader()
     : m_shaderprogramID(0),
@@ -247,3 +249,20 @@ bool Shader::sendUniformData(const std::string& uniformName, GLfloat x, GLfloat 
     glUniform4f(location, x, y, z, w);
     return true;
 }
+bool Shader::sendUniformData(const std::string& uniformName, const glm::mat4& matrix)
+{
+  
+    GLint location = glGetUniformLocation(m_shaderprogramID, uniformName.c_str());
+    if (location == -1)
+    {
+        if (warnedUniforms.find(uniformName) == warnedUniforms.end())
+        {
+            std::cout << "WARNING: Uniform '" << uniformName << "' not found in shader program." << std::endl;
+            warnedUniforms.insert(uniformName);
+        }
+        return false;
+    }
+    glUniformMatrix4fv(location, 1, GL_FALSE, &matrix[0][0]);
+	return true;
+}
+

@@ -3,6 +3,7 @@
 #include "Input.h"
 #include "Buffer.h"
 #include <iostream>
+#include<gtc/matrix_transform.hpp>
 
 Quad::Quad()
 {
@@ -58,6 +59,11 @@ Quad::Quad()
     if (offsetLoc == -1) {
         std::cout << "ERROR: 'offset' uniform not found in shader!" << std::endl;
     }
+	m_modelMatrix = glm::mat4(1.0f);// Initialize to identity matrix
+	m_modelMatrix = glm::translate(m_modelMatrix, glm::vec3(m_xPos, m_yPos, 0.0f));// Set initial position
+	m_modelMatrix = glm::scale(m_modelMatrix, glm::vec3(1.0f, 1.0f, 1.0f));// Set initial scale
+	m_modelMatrix = glm::rotate(m_modelMatrix, 4.0f, glm::vec3(0.0f, 0.0f, 1.0f));// Set initial rotation
+
 }
 
 Quad::~Quad()
@@ -89,7 +95,7 @@ void Quad::Render()
     glUseProgram(myShader->getShaderProgramID());
 
     // Send position to shader as uniform
-    myShader->sendUniformData("offset", m_xPos, m_yPos);
+    myShader->sendUniformData("model",m_modelMatrix);
 
     // Draw the quad
     m_buffer.DrawArrays(GL_TRIANGLES, 6);

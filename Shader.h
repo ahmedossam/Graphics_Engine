@@ -2,6 +2,7 @@
 #define SHADER_H
 #include <string>
 #include "glad.h"
+#include<glm.hpp>
 
 class Shader
 {
@@ -30,6 +31,9 @@ public:
     bool sendUniformData(const std::string& uniformName, GLfloat x, GLfloat y, GLfloat z);
     bool sendUniformData(const std::string& uniformName, GLfloat x, GLfloat y, GLfloat z, GLfloat w);
 
+	// Add matrix uniform sender
+	
+	bool sendUniformData(const std::string& uniformName, const glm::mat4& matrix);
 private:
     Shader();
     Shader(const Shader&);
